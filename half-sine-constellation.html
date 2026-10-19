@@ -1,0 +1,68 @@
+<div id="half-sine-constellation">
+  <h2>Half-sine shaping: the constellation trajectory</h2>
+  <svg viewBox="0 0 600 470" role="img" aria-label="Constellation diagram showing a smooth trajectory around the four I/Q chip states on the unit circle">
+    <defs>
+      <marker id="hs-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L7,3 z" fill="var(--viz-series-1)" />
+      </marker>
+    </defs>
+    <circle cx="300" cy="220" r="190" fill="none" stroke="var(--border)" stroke-width="1.5" stroke-dasharray="4 5" />
+    <line x1="75" y1="220" x2="525" y2="220" stroke="var(--border)" stroke-width="1" />
+    <line x1="300" y1="35" x2="300" y2="405" stroke="var(--border)" stroke-width="1" />
+    <text x="530" y="225" fill="var(--foreground)" font-size="12">I</text>
+    <text x="305" y="30" fill="var(--foreground)" font-size="12">Q</text>
+    <path id="trajectory" d="" fill="none" stroke="var(--viz-series-1)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+    <g id="chip-boundaries"></g>
+    <g fill="var(--foreground)" font-size="12">
+      <text x="300" y="16" text-anchor="middle">+Q</text>
+      <text x="546" y="224">+I</text>
+      <text x="300" y="433" text-anchor="middle">−Q</text>
+      <text x="42" y="224">−I</text>
+    </g>
+    <g fill="var(--viz-series-2)" stroke="var(--background)" stroke-width="2">
+      <circle cx="300" cy="30" r="5" /><circle cx="490" cy="220" r="5" />
+      <circle cx="300" cy="410" r="5" /><circle cx="110" cy="220" r="5" />
+    </g>
+    <text x="300" y="460" text-anchor="middle" fill="var(--muted-foreground)" font-size="12">Complex envelope (I + jQ); path advances through the 32-chip codeword</text>
+  </svg>
+  <p class="text-small">The four reference points show the chip-level I/Q states. Half-sine shaping keeps the same states but makes the signal travel smoothly between them; it does not jump across the plane.</p>
+  <script>
+    (() => {
+      const root = document.getElementById('half-sine-constellation');
+      const chips = '11011001110000110101001000101110'.split('').map(bit => bit === '1' ? 1 : -1);
+      const pulse = t => t >= 0 && t <= 2 ? Math.sin(Math.PI * t / 2) : 0;
+      const xy = t => {
+        let i = 0, q = 0;
+        chips.forEach((chip, k) => {
+          if (k % 2 === 0) i += chip * pulse(t - k);
+          else q += chip * pulse(t - k);
+        });
+        return [300 + 190 * i, 220 - 190 * q];
+      };
+      const points = [];
+      const start = 1;
+      const steps = 1600;
+      for (let n = 0; n <= steps; n++) points.push(xy(start + (32 - start) * n / steps));
+      root.querySelector('#trajectory').setAttribute('d', points.map((p, n) => `${n ? 'L' : 'M'}${p[0].toFixed(2)},${p[1].toFixed(2)}`).join(' '));
+      const ns = 'http://www.w3.org/2000/svg';
+      for (const n of [220, 600, 980, 1360]) {
+        const a = points[n], b = points[n + 28];
+        const arrow = document.createElementNS(ns, 'line');
+        arrow.setAttribute('x1', a[0]); arrow.setAttribute('y1', a[1]);
+        arrow.setAttribute('x2', b[0]); arrow.setAttribute('y2', b[1]);
+        arrow.setAttribute('stroke', 'var(--viz-series-1)'); arrow.setAttribute('stroke-width', '2');
+        arrow.setAttribute('marker-end', 'url(#hs-arrow)');
+        root.querySelector('svg').appendChild(arrow);
+      }
+      const boundaryGroup = root.querySelector('#chip-boundaries');
+      for (let k = 2; k <= 32; k += 2) {
+        const [x, y] = xy(k);
+        const dot = document.createElementNS(ns, 'circle');
+        dot.setAttribute('cx', x); dot.setAttribute('cy', y); dot.setAttribute('r', '3.5');
+        dot.setAttribute('fill', 'var(--viz-series-1)');
+        dot.setAttribute('stroke', 'var(--background)'); dot.setAttribute('stroke-width', '1.5');
+        boundaryGroup.appendChild(dot);
+      }
+    })();
+  </script>
+</div>
